@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const jwt = require("jsonwebtoken");
 
 // create app
 const app = express();
@@ -15,6 +16,31 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.send("foreign language camp server is running...");
 });
+
+// authGuard
+const authGuard = (req, res, next) => {
+  // check authorization
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "authorization failed authorization" });
+  }
+
+  // verify token
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.JWT_SECRET_KEY, (error, decode) => {
+    if (error) {
+      return res
+        .status(402)
+        .send({ error: true, message: "authorization failed verify token" });
+    }
+
+    // set data to body and go to next
+    req.decode = decode;
+    next();
+  });
+};
 
 // mongodb start
 
@@ -43,6 +69,16 @@ async function run() {
     const instructorColl = database.collection("instructors");
     const selectedColl = database.collection("selectedCart");
 
+    // generate jwt token
+    app.post("/jwt", (req, res) => {
+      const userInfo = req.body;
+      const token = jwt.sign(userInfo, process.env.JWT_SECRET_KEY, {
+        expiresIn: "1h",
+      });
+
+      res.send({ token });
+    });
+
     // get all classes
     app.get("/classes", async (req, res) => {
       const result = await classColl.find().toArray();
@@ -55,7 +91,7 @@ async function run() {
       res.send(result);
     });
 
-    // get all class from selected collection
+    // get all class from selected collection for individual user
     app.get("/selectedCarts", async (req, res) => {
       const userEmail = req.query.email;
       const result = await selectedColl.find({ email: userEmail }).toArray();
