@@ -68,6 +68,7 @@ async function run() {
     const classColl = database.collection("classes");
     const instructorColl = database.collection("instructors");
     const selectedColl = database.collection("selectedCart");
+    const usersColl = database.collection("users");
 
     // generate jwt token
     app.post("/jwt", (req, res) => {
@@ -77,6 +78,21 @@ async function run() {
       });
 
       res.send({ token });
+    });
+
+    // put a user
+    app.put("/users", async (req, res) => {
+      const userEmail = req.query.email;
+      const body = req.body;
+      const query = { email: userEmail };
+      const updateDoc = {
+        $set: {
+          ...body,
+        },
+      };
+      const options = { upsert: true };
+      const result = await usersColl.updateOne(query, updateDoc, options);
+      res.send(result);
     });
 
     // get all classes
