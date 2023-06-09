@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 
 // create app
 const app = express();
@@ -69,6 +70,7 @@ async function run() {
     const instructorColl = database.collection("instructors");
     const selectedColl = database.collection("selectedCart");
     const usersColl = database.collection("users");
+    const paymentsColl = database.collection("payments");
 
     // generate jwt token
     app.post("/jwt", (req, res) => {
@@ -141,6 +143,33 @@ async function run() {
         },
         { projection: { price: 1 } }
       );
+      res.send(result);
+    });
+
+    // create a payment intent
+    app.post("/create-payment-intent", authGuard, async (req, res) => {
+      const { price } = req.body;
+      const totalPrice = price * 100;
+      if (req.decode.email !== req.query.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: totalPrice,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // add payment history to payments collection
+    app.post("/payments", async (req, res) => {
+      const result = await paymentsColl.insertOne(req.body);
       res.send(result);
     });
 
