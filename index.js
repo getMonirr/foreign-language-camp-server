@@ -137,12 +137,9 @@ async function run() {
           .status(403)
           .send({ error: true, message: "unAuthorized access" });
       }
-      const result = await selectedColl.findOne(
-        {
-          _id: new ObjectId(req.params.id),
-        },
-        { projection: { price: 1 } }
-      );
+      const result = await selectedColl.findOne({
+        _id: new ObjectId(req.params.id),
+      });
       res.send(result);
     });
 
@@ -169,6 +166,20 @@ async function run() {
 
     // add payment history to payments collection
     app.post("/payments", async (req, res) => {
+      await selectedColl.deleteOne({ _id: new ObjectId(req?.body?.classId) });
+
+      // minus a seats
+      const targetClass = await classColl.findOne({
+        _id: new ObjectId(req?.body?.classId),
+      });
+
+      if (targetClass) {
+        await classColl.updateOne(
+          { _id: new ObjectId(req?.body?.classId) },
+          { $inc: { seats: -1, enrolledStudents: 1 } }
+        );
+      }
+
       const result = await paymentsColl.insertOne(req.body);
       res.send(result);
     });
@@ -191,6 +202,20 @@ async function run() {
       const result = await selectedColl.deleteOne({
         _id: new ObjectId(req.params.id),
       });
+      res.send(result);
+    });
+
+    // get enrolled classes
+    app.get("/enrolledClasses", authGuard, async (req, res) => {
+      const userEmail = req.query.email;
+
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+
+      const result = await paymentsColl.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
 
