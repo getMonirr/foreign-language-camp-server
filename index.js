@@ -126,6 +126,23 @@ async function run() {
       const result = await selectedColl.find({ email: userEmail }).toArray();
       res.send(result);
     });
+    // get a class price from selected cart
+    app.get("/selectedCarts/:id", authGuard, async (req, res) => {
+      const userEmail = req.query.email;
+
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+      const result = await selectedColl.findOne(
+        {
+          _id: new ObjectId(req.params.id),
+        },
+        { projection: { price: 1 } }
+      );
+      res.send(result);
+    });
 
     // add class to selected collection
     app.post("/selectedCarts", async (req, res) => {
@@ -134,7 +151,7 @@ async function run() {
     });
 
     // delete a class from selected cart
-    app.delete("/selectedCarts/:id",authGuard, async (req, res) => {
+    app.delete("/selectedCarts/:id", authGuard, async (req, res) => {
       const userEmail = req.query.email;
 
       if (userEmail !== req?.decode?.email) {
