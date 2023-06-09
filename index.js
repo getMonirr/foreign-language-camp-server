@@ -97,19 +97,32 @@ async function run() {
 
     // get all classes
     app.get("/classes", async (req, res) => {
-      const result = await classColl.find().toArray();
+      const result = await classColl
+        .find()
+        .sort({ enrolledStudents: -1 })
+        .toArray();
       res.send(result);
     });
 
     // get all instructors
     app.get("/instructors", async (req, res) => {
-      const result = await instructorColl.find().toArray();
+      const result = await instructorColl
+        .find()
+        .sort({ studentsEnrolled: -1 })
+        .toArray();
       res.send(result);
     });
 
     // get all class from selected collection for individual user
-    app.get("/selectedCarts", async (req, res) => {
+    app.get("/selectedCarts", authGuard, async (req, res) => {
       const userEmail = req.query.email;
+
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+
       const result = await selectedColl.find({ email: userEmail }).toArray();
       res.send(result);
     });
