@@ -82,6 +82,18 @@ async function run() {
       res.send({ token });
     });
 
+    // get user role
+    app.get("/users", authGuard, async (req, res) => {
+      const userEmail = req.query.email;
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+      const result = await usersColl.findOne({ email: userEmail });
+      res.send(result);
+    });
+
     // put a user
     app.put("/users", async (req, res) => {
       const userEmail = req.query.email;
@@ -165,7 +177,7 @@ async function run() {
     });
 
     // add payment history to payments collection
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", authGuard, async (req, res) => {
       await selectedColl.deleteOne({ _id: new ObjectId(req?.body?.classId) });
 
       // minus a seats
@@ -181,6 +193,18 @@ async function run() {
       }
 
       const result = await paymentsColl.insertOne(req.body);
+      res.send(result);
+    });
+
+    // get payment history
+    app.get("/payments", authGuard, async (req, res) => {
+      if (req.decode.email !== req.query.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+
+      const result = await paymentsColl.find().sort({ date: -1 }).toArray();
       res.send(result);
     });
 
