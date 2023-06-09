@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 
 // create app
@@ -130,6 +130,21 @@ async function run() {
     // add class to selected collection
     app.post("/selectedCarts", async (req, res) => {
       const result = await selectedColl.insertOne(req.body);
+      res.send(result);
+    });
+
+    // delete a class from selected cart
+    app.delete("/selectedCarts/:id",authGuard, async (req, res) => {
+      const userEmail = req.query.email;
+
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+      const result = await selectedColl.deleteOne({
+        _id: new ObjectId(req.params.id),
+      });
       res.send(result);
     });
 
