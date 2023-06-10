@@ -110,16 +110,74 @@ async function run() {
     });
 
     // get all classes
-    app.get("/classes", async (req, res) => {
+    app.get("/popularClasses", async (req, res) => {
       const result = await classColl
         .find()
         .sort({ enrolledStudents: -1 })
         .toArray();
       res.send(result);
     });
+    // verify admin
+    const adminGuard = async (req, res, next) => {
+      const targetUser = await usersColl.findOne({ email: req.decode.email });
+      if (!targetUser?.role === "admin") {
+        return res
+          .status(401)
+          .send({ error: true, message: "unauthorize access" });
+      }
+      next();
+    };
+
+    // get all class for all user
+    app.get("/all-classes", authGuard, async (req, res) => {
+      const userEmail = req.query.email;
+
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+      const result = await classColl.find().toArray();
+
+      res.send(result);
+    });
+
+    // update status of a class
+    app.patch("/all-classes/:id", async (req, res) => {
+      const userEmail = req.query.email;
+      const query = { _id: new ObjectId(req.params.id) };
+      const updateDoc = {
+        $set: {
+          status: req.body?.status,
+        },
+      };
+
+      const result = await classColl.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    // verify instructor
+    const instructorGuard = async (req, res, next) => {
+      const targetUser = await usersColl.findOne({ email: req.decode.email });
+      if (!targetUser?.role === "instructor") {
+        return res
+          .status(401)
+          .send({ error: true, message: "unauthorize access" });
+      }
+      next();
+    };
+
+    // get all classes by instructor email
+    app.get("/classes", authGuard, instructorGuard, async (req, res) => {
+      const userEmail = req.query.email;
+      const result = await classColl
+        .find({ instructorEmail: userEmail })
+        .toArray();
+      res.send(result);
+    });
 
     // post a class
-    app.post("/classes", async (req, res) => {
+    app.post("/classes", authGuard, instructorGuard, async (req, res) => {
       const result = await classColl.insertOne(req.body);
       res.send(result);
     });
