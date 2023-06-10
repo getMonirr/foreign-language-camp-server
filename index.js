@@ -82,6 +82,17 @@ async function run() {
       res.send({ token });
     });
 
+    // verify admin
+    const adminGuard = async (req, res, next) => {
+      const targetUser = await usersColl.findOne({ email: req.decode.email });
+      if (!targetUser?.role === "admin") {
+        return res
+          .status(401)
+          .send({ error: true, message: "unauthorize access" });
+      }
+      next();
+    };
+
     // get user role
     app.get("/users", authGuard, async (req, res) => {
       const userEmail = req.query.email;
@@ -109,6 +120,19 @@ async function run() {
       res.send(result);
     });
 
+    // get all users for admin
+    app.get("/all-users", authGuard, adminGuard, async (req, res) => {
+      const userEmail = req.query.email;
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
+
+      const result = await usersColl.find().toArray();
+      res.send(result);
+    });
+
     // get all classes
     app.get("/popularClasses", async (req, res) => {
       const result = await classColl
@@ -117,16 +141,6 @@ async function run() {
         .toArray();
       res.send(result);
     });
-    // verify admin
-    const adminGuard = async (req, res, next) => {
-      const targetUser = await usersColl.findOne({ email: req.decode.email });
-      if (!targetUser?.role === "admin") {
-        return res
-          .status(401)
-          .send({ error: true, message: "unauthorize access" });
-      }
-      next();
-    };
 
     // get all class for all user
     app.get("/all-classes", authGuard, async (req, res) => {
@@ -142,13 +156,19 @@ async function run() {
       res.send(result);
     });
 
-    // update status of a class
-    app.patch("/all-classes/:id", async (req, res) => {
+    // update status and add feedback properties of a class
+    app.patch("/all-classes/:id", authGuard, adminGuard, async (req, res) => {
       const userEmail = req.query.email;
+
+      if (userEmail !== req?.decode?.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "unAuthorized access" });
+      }
       const query = { _id: new ObjectId(req.params.id) };
       const updateDoc = {
         $set: {
-          status: req.body?.status,
+          ...req.body,
         },
       };
 
