@@ -118,6 +118,12 @@ async function run() {
       res.send(result);
     });
 
+    // post a class
+    app.post("/classes", async (req, res) => {
+      const result = await classColl.insertOne(req.body);
+      res.send(result);
+    });
+
     // get all instructors
     app.get("/instructors", async (req, res) => {
       const result = await instructorColl
