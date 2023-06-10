@@ -288,7 +288,7 @@ async function run() {
           .send({ error: true, message: "unAuthorized access" });
       }
 
-      const result = await paymentsColl.find().sort({ date: -1 }).toArray();
+      const result = await paymentsColl.find({email: req.query.email}).sort({ date: -1 }).toArray();
       res.send(result);
     });
 
@@ -323,7 +323,10 @@ async function run() {
           .send({ error: true, message: "unAuthorized access" });
       }
 
-      const result = await paymentsColl.find().sort({ date: -1 }).toArray();
+      const result = await paymentsColl
+        .find({ email: userEmail })
+        .sort({ date: -1 })
+        .toArray();
       res.send(result);
     });
 
