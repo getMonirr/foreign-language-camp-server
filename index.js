@@ -133,31 +133,32 @@ async function run() {
       res.send(result);
     });
 
-    // get all classes
+    // get all popular classes limit 6
     app.get("/popularClasses", async (req, res) => {
       const result = await classColl
         .find()
         .sort({ enrolledStudents: -1 })
+        .limit(6)
         .toArray();
       res.send(result);
     });
 
     // get all class for all user
-    app.get("/all-classes", authGuard, async (req, res) => {
-      const userEmail = req.query.email;
+    app.get("/all-classes", async (req, res) => {
+      const result = await classColl.find({ status: "approved" }).toArray();
 
-      if (userEmail !== req?.decode?.email) {
-        return res
-          .status(403)
-          .send({ error: true, message: "unAuthorized access" });
-      }
+      res.send(result);
+    });
+
+    // get all class for admin
+    app.get("/admin-classes", authGuard, adminGuard, async (req, res) => {
       const result = await classColl.find().toArray();
 
       res.send(result);
     });
 
     // update status and add feedback properties of a class
-    app.patch("/all-classes/:id", authGuard, adminGuard, async (req, res) => {
+    app.patch("/admin-classes/:id", authGuard, adminGuard, async (req, res) => {
       const userEmail = req.query.email;
 
       if (userEmail !== req?.decode?.email) {
@@ -202,12 +203,19 @@ async function run() {
       res.send(result);
     });
 
-    // get all instructors
-    app.get("/instructors", async (req, res) => {
+    // get all popular instructors limit 6
+    app.get("/popularInstructors", async (req, res) => {
       const result = await instructorColl
         .find()
         .sort({ studentsEnrolled: -1 })
+        .limit(6)
         .toArray();
+      res.send(result);
+    });
+
+    // get all instructors
+    app.get("/instructors", async (req, res) => {
+      const result = await instructorColl.find().toArray();
       res.send(result);
     });
 
@@ -262,7 +270,9 @@ async function run() {
 
     // add payment history to payments collection
     app.post("/payments", authGuard, async (req, res) => {
-      await selectedColl.deleteOne({ _id: new ObjectId(req?.body?.classId) });
+      await selectedColl.deleteOne({
+        _id: new ObjectId(req?.body?.cartId),
+      });
 
       // minus a seats
       const targetClass = await classColl.findOne({
@@ -275,7 +285,6 @@ async function run() {
           { $inc: { seats: -1, enrolledStudents: 1 } }
         );
       }
-
       const result = await paymentsColl.insertOne(req.body);
       res.send(result);
     });
@@ -288,7 +297,10 @@ async function run() {
           .send({ error: true, message: "unAuthorized access" });
       }
 
-      const result = await paymentsColl.find({email: req.query.email}).sort({ date: -1 }).toArray();
+      const result = await paymentsColl
+        .find({ email: req.query.email })
+        .sort({ date: -1 })
+        .toArray();
       res.send(result);
     });
 
