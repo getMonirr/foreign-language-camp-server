@@ -158,6 +158,16 @@ async function run() {
       res.send(result);
     });
 
+    // get data for banner
+    app.get("/banner", async (req, res) => {
+      const result = await classColl
+        .find()
+        .limit(6)
+        .project({ _id: 1, image: 1, name: 1, description: 1, instructor: 1 })
+        .toArray();
+      res.send(result);
+    });
+
     // get all class for all user
     app.get("/all-classes", async (req, res) => {
       const result = await classColl.find({ status: "approved" }).toArray();
