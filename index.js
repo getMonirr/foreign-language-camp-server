@@ -94,13 +94,8 @@ async function run() {
     };
 
     // get user role
-    app.get("/users", authGuard, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const userEmail = req.query.email;
-      if (userEmail !== req?.decode?.email) {
-        return res
-          .status(403)
-          .send({ error: true, message: "unAuthorized access" });
-      }
       const result = await usersColl.findOne({ email: userEmail });
       res.send(result);
     });
@@ -110,13 +105,33 @@ async function run() {
       const userEmail = req.query.email;
       const body = req.body;
       const query = { email: userEmail };
+
+      const existingUser = await usersColl.findOne(query);
+
+      if (existingUser) {
+        res.send({ exist: true });
+      } else {
+        const newUser = {
+          role: "student",
+          ...body,
+        };
+
+        const result = await usersColl.insertOne(newUser);
+        res.send(result);
+      }
+    });
+
+    // patch a user
+    app.patch("/users", async (req, res) => {
+      const userEmail = req.query.email;
+      const body = req.body;
+      const query = { email: userEmail };
       const updateDoc = {
         $set: {
           ...body,
         },
       };
-      const options = { upsert: true };
-      const result = await usersColl.updateOne(query, updateDoc, options);
+      const result = await usersColl.updateOne(query, updateDoc);
       res.send(result);
     });
 
